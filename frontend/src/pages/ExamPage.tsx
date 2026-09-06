@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom';
 import { gsap } from 'gsap';
 import './ExamPage.css';
 
-// Extension bridge — communicates with the Manifest V3 extension
-import { startExamSession, endExamSession, isExtensionPresent } from '../../extension/src/extensionBridge';
+// Extension bridge — communicates with the Manifest V3 extension via window.postMessage
+import { startExamSession, endExamSession, isExtensionPresent } from '../extensionBridge';
 
 type MonitoringStatus = 'checking' | 'active' | 'inactive';
 type ConnectionStatus = 'connecting' | 'connected' | 'error';
