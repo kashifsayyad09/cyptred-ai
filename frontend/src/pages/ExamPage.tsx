@@ -28,7 +28,7 @@ const ExamPage: React.FC = () => {
   const [consentGiven, setConsentGiven] = useState(false);
   const [examStarted, setExamStarted] = useState(false);
 
-  const headerRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<HTMLDivElement>(null);
 
   // ── GSAP entrance ─────────────────────────────────────────────────────────

@@ -49,8 +49,6 @@ function splitSections(text: string): { label: string; content: string; color: s
   ];
 
   let remaining = text;
-  let lastLabel = '';
-  let lastColor = '#9ca3af';
 
   // Simple section splitter: find label markers and cut
   const allMarkers: { idx: number; label: string; color: string }[] = [];

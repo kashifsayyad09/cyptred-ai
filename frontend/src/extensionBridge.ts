@@ -9,8 +9,6 @@
  * keep both files in sync if you change the message protocol.
  */
 
-'use strict';
-
 export interface ExamSessionParams {
   sessionId: string;
   token: string;
