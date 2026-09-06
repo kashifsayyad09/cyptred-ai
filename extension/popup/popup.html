@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Exam Guardian</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <span class="header__icon">🛡</span>
+    <span class="header__title">AI Exam Guardian</span>
+  </header>
+
+  <main class="main">
+    <!-- Session status card -->
+    <div class="card" id="statusCard">
+      <div class="card__label">Session Status</div>
+      <div class="status" id="statusBadge">
+        <span class="status__dot" id="statusDot"></span>
+        <span class="status__text" id="statusText">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Session details (shown when active) -->
+    <div class="card hidden" id="detailsCard">
+      <div class="card__label">Session ID</div>
+      <div class="card__value mono" id="sessionId">—</div>
+      <div class="card__label mt">Buffered Events</div>
+      <div class="card__value" id="bufferedCount">0</div>
+    </div>
+
+    <!-- Risk indicator (shown when active) -->
+    <div class="card hidden" id="riskCard">
+      <div class="card__label">Risk Level</div>
+      <div class="risk-badge" id="riskBadge">—</div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__text">
+      Only exam-integrity signals are collected during active sessions.
+      No passwords or unrelated data are ever captured.
+    </p>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Exam Guardian</title>
+  <style>
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e5e7eb;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; color: #fff; }
+    .subtitle { color: #9ca3af; font-size: 0.78rem; margin-bottom: 16px; }
+    .status { padding: 8px 12px; border-radius: 6px; background: #1a1a2e; border: 1px solid #2d2d44; margin-bottom: 12px; }
+    .status__label { font-size: 0.72rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+    .status__value { font-weight: 600; font-size: 0.9rem; margin-top: 2px; }
+    .status--inactive .status__value { color: #6b7280; }
+    .status--active .status__value { color: #22c55e; }
+    .disclaimer { font-size: 0.7rem; color: #6b7280; border-top: 1px solid #2d2d44; padding-top: 10px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>🛡 AI Exam Guardian</h1>
+  <p class="subtitle">Exam integrity telemetry extension</p>
+  <div class="status status--inactive" id="sessionStatus">
+    <div class="status__label">Session Status</div>
+    <div class="status__value" id="sessionValue">No active exam</div>
+  </div>
+  <p class="disclaimer">
+    This extension captures only permitted exam-session signals.
+    No passwords or unrelated browsing data are collected.
+  </p>
+  <script src="popup.js"></script>
+</body>
+</html>

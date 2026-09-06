@@ -1,0 +1,85 @@
+/* AI Exam Guardian — Popup Styles */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 280px;
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  background: #0f0f1a;
+  color: #e5e7eb;
+  line-height: 1.5;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #2d2d44;
+}
+.header__icon { font-size: 1.2rem; }
+.header__title { font-weight: 700; font-size: 0.9rem; color: #fff; }
+
+/* ── Main ──────────────────────────────────────────────────────────────── */
+.main { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Card ──────────────────────────────────────────────────────────────── */
+.card {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.card__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.card__value { font-weight: 600; font-size: 0.875rem; }
+.card__value.mono { font-family: monospace; font-size: 0.75rem; color: #9ca3af; word-break: break-all; }
+.mt { margin-top: 8px; }
+.hidden { display: none !important; }
+
+/* ── Status badge ──────────────────────────────────────────────────────── */
+.status { display: flex; align-items: center; gap: 6px; }
+.status__dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #4b5563;
+  flex-shrink: 0;
+}
+.status__dot--active  { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+.status__dot--idle    { background: #4b5563; }
+.status__text { font-weight: 600; font-size: 0.875rem; }
+
+/* ── Risk badge ────────────────────────────────────────────────────────── */
+.risk-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: #374151;
+  color: #9ca3af;
+}
+.risk-badge--NORMAL           { background: #064e3b; color: #6ee7b7; }
+.risk-badge--MONITORING       { background: #1e3a5f; color: #93c5fd; }
+.risk-badge--ATTENTION        { background: #78350f; color: #fcd34d; }
+.risk-badge--REVIEW_REQUIRED  { background: #7c2d12; color: #fdba74; }
+.risk-badge--HIGH_PRIORITY_REVIEW { background: #7f1d1d; color: #fca5a5; }
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+.footer {
+  padding: 8px 14px 12px;
+  border-top: 1px solid #2d2d44;
+}
+.footer__text {
+  font-size: 0.68rem;
+  color: #6b7280;
+  line-height: 1.4;
+}

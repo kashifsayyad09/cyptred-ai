@@ -1,0 +1,200 @@
+/* ExamPage styles */
+
+.exam-consent,
+.exam-prestart {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--color-bg, #0f0f1a);
+}
+
+.exam-consent__box,
+.exam-prestart__box {
+  background: var(--color-surface, #1a1a2e);
+  border: 1px solid var(--color-border, #2d2d44);
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  max-width: 580px;
+  width: 100%;
+}
+
+.exam-consent__box h1,
+.exam-prestart__box h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #f9fafb;
+}
+
+.exam-consent__box h2 {
+  font-size: 1rem;
+  color: #d1d5db;
+  margin-bottom: 1rem;
+}
+
+.exam-consent__box p,
+.exam-prestart__box p {
+  color: #9ca3af;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.exam-consent__box ul {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.8;
+}
+
+.consent-warning {
+  background: #1f2937;
+  border-left: 3px solid #f59e0b;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.82rem !important;
+  color: #d1d5db !important;
+}
+
+/* ── Monitor badge ─────────────────────────────────────────────────── */
+.monitor-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+.monitor-badge--active   { background: #064e3b; color: #6ee7b7; }
+.monitor-badge--inactive { background: #78350f; color: #fcd34d; }
+.monitor-badge--checking { background: #1e3a5f; color: #93c5fd; }
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn--primary { background: #3b82f6; color: #fff; }
+.btn--large   { padding: 0.8rem 2.5rem; font-size: 1rem; }
+
+/* ── Active exam layout ─────────────────────────────────────────── */
+.exam-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg, #0f0f1a);
+}
+
+/* Header */
+.exam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: #111827;
+  border-bottom: 1px solid #2d2d44;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 1rem;
+}
+.exam-header__left  { flex: 1; }
+.exam-header__center { flex: 0 0 auto; }
+.exam-header__right { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; }
+
+.exam-title { font-weight: 700; font-size: 0.95rem; color: #f9fafb; }
+
+.exam-timer {
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: #22c55e;
+  letter-spacing: 0.05em;
+}
+.exam-timer--warning { color: #ef4444; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.conn-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.conn-status--connected  { color: #22c55e; }
+.conn-status--connecting { color: #9ca3af; }
+.conn-status--error      { color: #ef4444; }
+
+.monitor-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.monitor-dot--active   { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+.monitor-dot--inactive { background: #6b7280; }
+.monitor-dot--checking { background: #f59e0b; }
+
+/* Main content */
+.exam-main {
+  flex: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  width: 100%;
+}
+
+/* Questions */
+.exam-question {
+  background: #111827;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.question-label {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #d1d5db;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.question-number {
+  font-weight: 700;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.question-answer {
+  width: 100%;
+  background: #0f0f1a;
+  border: 1px solid #374151;
+  border-radius: 5px;
+  color: #e5e7eb;
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.question-answer:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Submit */
+.exam-submit {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0 2rem;
+}

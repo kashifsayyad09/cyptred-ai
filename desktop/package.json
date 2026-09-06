@@ -1,0 +1,30 @@
+{
+  "name": "ai-exam-guardian-desktop",
+  "version": "0.1.0",
+  "description": "AI Exam Guardian — Electron desktop wrapper (future/advanced component)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.exam-guardian.desktop",
+    "productName": "AI Exam Guardian",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    }
+  }
+}
