@@ -120,42 +120,39 @@ ai-exam-guardian/
 | 5 | AI Assistant Detection | ██████████ 100% |
 | 6 | RAG Knowledge System | ██████████ 100% |
 | 7 | Groq + NVIDIA AI Gateway | ██████████ 100% |
-| 8 | AI Explanation + RAG Integration | ░░░░░░░░░░ 0% |
+| 8 | AI Explanation + RAG Integration | ██████████ 100% |
 | 9 | Teacher Dashboard | ░░░░░░░░░░ 0% |
 | 10 | Security + Observability | ░░░░░░░░░░ 0% |
 | 11 | AWS Deployment | ░░░░░░░░░░ 0% |
 | 12 | Final QA + Demo | ░░░░░░░░░░ 0% |
 
-**Overall Progress: 72%**
+**Overall Progress: 78%**
 
 ---
 
 ## Current Phase
 
-**Phase 7 — COMPLETE**
+**Phase 8 — COMPLETE**
 
-AI Gateway fully implemented:
-- `GatewayConfig` — frozen dataclass, all values from env vars (no hardcoded secrets)
-- `ProviderHealth` — per-provider state machine (HEALTHY → DEGRADED → UNHEALTHY → recovery)
-- `ProviderClient` — thin httpx wrapper with precise error classification
-- `FallbackReason` — enumerated triggers: timeout, 429, 5xx, connection error, quota, token limit, empty response, unknown
-- `AIGateway` — Groq PRIMARY → NVIDIA FALLBACK → degraded response (3-level cascade)
-- Circuit breaker: when Groq UNHEALTHY, requests skip Groq directly to NVIDIA
-- Automatic Groq restoration after `recovery_threshold` consecutive successes
-- `AIGatewayResponse.text` — always returns useful content (success content or degraded message)
-- `_LazyGateway` module singleton — safe to import without `pydantic_settings` in test environments
-- `explain.py` — `POST /api/v1/explain` (teacher-only), `GET /api/v1/explain/provider-health`
-- System prompt enforces: no verdict, distinguish evidence from inference, teacher decides
-- All API keys in `Authorization` header only — never logged, never returned in responses
-- 56 Phase 7 tests pass + 3 skipped (Docker-only pydantic_settings tests)
+AI Explanation + RAG Integration fully implemented:
+- `prompt_builder.py` — `IncidentPrompt` dataclass with structured `build()` / `validate()`. Enforces three mandatory sections: `[OBSERVED EVIDENCE]`, `[POLICY INTERPRETATION]`, `[AI INFERENCE]`. Policy is labelled as RETRIEVED — AI cannot extend it
+- `FORBIDDEN_PHRASES` list — server-side detection of forbidden verdict language ("student cheated", "definitely cheated", etc.)
+- `explanation_service.py` — `ExplanationOrchestrator` full pipeline: MCP summary → RAG policy → AI Gateway → output validation → forbidden phrase sanitisation
+- `ExplanationResult.validate_output()` — post-generation check: labels present, disclaimer present, no forbidden phrases
+- Graceful degradation at every step: MCP unavailable, RAG unavailable, AI unavailable — deterministic risk score always preserved
+- `_build_degraded_explanation()` — structured fallback with all required labels and disclaimer, no AI needed
+- `_build_safe_fallback()` — replacement explanation when AI output violated policy
+- `_ensure_disclaimer()` — always appends teacher-determination disclaimer if AI omitted it
+- `explain.py` upgraded — `POST /explain/full` fully orchestrated endpoint + `POST /explain` simple endpoint, both with `ExplainResponse` integrity labels (`has_evidence_label`, `has_disclaimer`, etc.)
+- 57 Phase 8 tests — all passing
 
 ---
 
 ## Next Phase
 
-**Phase 8 — AI Explanation + RAG Integration**
+**Phase 9 — Teacher Dashboard**
 
-Combine MCP evidence + Rules Engine risk score + RAG policy context → Groq/NVIDIA generates explainable incident summaries. Ensure evidence ≠ inference. AI must not invent policy. AI must not make unsupported accusations.
+React dashboard: sessions list, risk indicators, evidence timeline, incident review, AI explanation panel, provider health, policy references.
 
 ---
 
@@ -440,11 +437,12 @@ python -m pytest tests/ mcp/tests/ mcp/detectors/ai_assistant_detector/tests/ ra
 | Root Python tests | 9 | ✅ All pass |
 | Backend Phase 2 tests | 9 pass + 7 skip | ✅ (skipped = Docker-only) |
 | Backend Phase 7 tests | 56 pass + 3 skip | ✅ (skipped = Docker-only) |
+| Backend Phase 8 tests | 57 | ✅ All pass |
 | MCP Phase 4 tests | 50 | ✅ All pass |
 | AI Detector Phase 5 tests | 50 | ✅ All pass |
 | RAG Phase 6 tests | 88 | ✅ All pass |
 | Extension JS tests | 37 | ✅ All pass |
-| **TOTAL** | **262 pass / 0 fail** | ✅ |
+| **TOTAL** | **319 pass / 0 fail** | ✅ |
 
 ---
 
@@ -570,6 +568,7 @@ Student starts exam
 | 2025-01-01 | Phase 5 | AI Assistant Detector — 6 assistants (ParakeetAI first), DETECTED/SUSPECTED/NOT_DETECTED/UNOBSERVABLE states, 5 signal extractors, behavioral correlation, false-positive safeguards | 50 passed / 0 failed | None | Phase 6: RAG |
 | 2025-01-01 | Phase 6 | RAG Knowledge System — RAGConfig, DocType (10 types), Chunker, InMemoryVectorStore+TF-IDF fallback, ChromaVectorStore, RAGEngine, 4 sample policy docs covering all 6 AI assistants, FastAPI server, rag_client.py | 88 passed / 0 failed | None | Phase 7: Groq + NVIDIA AI Gateway |
 | 2025-01-01 | Phase 7 | AI Gateway — GatewayConfig, ProviderHealth state machine, ProviderClient (httpx), FallbackReason enum, AIGateway (3-level cascade), circuit breaker, automatic Groq recovery, LazyGateway singleton, explain.py API endpoint | 56 pass + 3 skip / 0 fail | Python 3.14 no auto event loop — used asyncio.new_event_loop() in tests | Phase 8: AI Explanation + RAG Integration |
+| 2025-01-01 | Phase 8 | AI Explanation + RAG Integration — IncidentPrompt (build/validate), FORBIDDEN_PHRASES, ExplanationOrchestrator (MCP+RAG+AI pipeline), ExplanationResult.validate_output(), degraded/safe_fallback helpers, explain.py /full endpoint, integrity labels in response | 57 passed / 0 failed | None | Phase 9: Teacher Dashboard |
 
 ---
 
