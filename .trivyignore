@@ -1,0 +1,14 @@
+# .trivyignore — Trivy vulnerability suppression list
+#
+# Format:
+#   CVE-YYYY-NNNNN  (one per line, with a comment explaining why)
+#
+# Only suppress CVEs that are:
+#   - Confirmed not exploitable in our threat model (with justification)
+#   - Fixed in a version not yet available in our base image
+#   - False positives confirmed by the upstream project
+#
+# NEVER suppress critical vulnerabilities without a documented justification.
+
+# Example (uncomment and adapt as needed):
+# CVE-2023-XXXXX  # Not exploitable: library used in test-only path, no network exposure

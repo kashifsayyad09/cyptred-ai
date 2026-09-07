@@ -1,0 +1,39 @@
+# ── terraform.tfvars.example ──────────────────────────────────────────────────
+# Copy this file to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars to version control (it contains secrets).
+
+aws_region   = "us-east-1"
+environment  = "production"
+project_name = "exam-guardian"
+
+# ── Networking ────────────────────────────────────────────────────────────────
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+availability_zones   = ["us-east-1a", "us-east-1b"]
+
+# IMPORTANT: Change this to your actual IP to restrict SSH access
+ssh_allowed_cidr = "YOUR_IP_ADDRESS/32"
+
+# ── EC2 ──────────────────────────────────────────────────────────────────────
+ec2_instance_type       = "t3.medium"
+ec2_key_pair_name       = "your-key-pair-name"
+ec2_root_volume_size_gb = 30
+
+# ── RDS ──────────────────────────────────────────────────────────────────────
+rds_instance_class           = "db.t3.micro"
+rds_allocated_storage_gb     = 20
+rds_max_allocated_storage_gb = 100
+rds_db_name                  = "exam_guardian"
+rds_username                 = "exam_guardian_admin"
+rds_password                 = "CHANGE_ME_STRONG_PASSWORD_MIN_16_CHARS"
+rds_backup_retention_days    = 7
+rds_multi_az                 = false
+
+# ── GitHub OIDC ───────────────────────────────────────────────────────────────
+github_org  = "your-github-org-or-username"
+github_repo = "ai-exam-guardian"
+
+# ── Domain (optional) ─────────────────────────────────────────────────────────
+# domain_name         = "examguardian.example.com"
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxx"

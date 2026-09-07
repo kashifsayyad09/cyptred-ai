@@ -1,0 +1,201 @@
+# AI Exam Guardian — Production Docker Compose
+#
+# Usage on EC2:
+#   docker compose -f docker-compose.prod.yml up -d --pull always
+#
+# Prerequisites:
+#   - .env file in the same directory with all required variables
+#   - ECR login: aws ecr get-login-password | docker login ...
+#   - ECR_REGISTRY env var: <account>.dkr.ecr.<region>.amazonaws.com
+
+version: '3.9'
+
+services:
+  # ── Reverse Proxy ─────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    image: ${ECR_REGISTRY}/exam-guardian-frontend:${IMAGE_TAG:-latest}
+    expose:
+      - "80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── Backend (FastAPI) ──────────────────────────────────────────────────────
+  backend:
+    image: ${ECR_REGISTRY}/exam-guardian-backend:${IMAGE_TAG:-latest}
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=production
+      - MCP_HOST=mcp
+      - MCP_PORT=8001
+      - RAG_HOST=rag
+      - RAG_PORT=8002
+    depends_on:
+      mcp:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  # ── MCP Server ────────────────────────────────────────────────────────────
+  mcp:
+    image: ${ECR_REGISTRY}/exam-guardian-mcp:${IMAGE_TAG:-latest}
+    expose:
+      - "8001"
+    env_file:
+      - .env
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ── RAG Engine ────────────────────────────────────────────────────────────
+  rag:
+    image: ${ECR_REGISTRY}/exam-guardian-rag:${IMAGE_TAG:-latest}
+    expose:
+      - "8002"
+    env_file:
+      - .env
+    volumes:
+      - rag-vectorstore:/app/rag/vectorstore
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    expose:
+      - "9090"
+    # NOT exposed on public port in production — access via SSH tunnel or VPN
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.3
+    expose:
+      - "3000"
+    # NOT exposed on public port in production — access via SSH tunnel or VPN
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - exam-guardian-net
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  exam-guardian-net:
+    driver: bridge
+
+volumes:
+  rag-vectorstore:
+  prometheus-data:
+  grafana-data:

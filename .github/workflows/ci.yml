@@ -1,0 +1,271 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # ── Lint & type-check ───────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python lint tools
+        run: pip install ruff
+
+      - name: Ruff lint — backend
+        run: ruff check backend/app --select E,W,F,I --ignore E501
+        continue-on-error: true  # non-blocking during MVP phase
+
+      - name: Ruff lint — mcp
+        run: ruff check mcp --select E,W,F,I --ignore E501
+        continue-on-error: true
+
+      - name: Ruff lint — rag
+        run: ruff check rag --select E,W,F,I --ignore E501
+        continue-on-error: true
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+        continue-on-error: true  # non-blocking during MVP phase
+
+  # ── Python tests ────────────────────────────────────────────────────────────
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install MCP dependencies
+        working-directory: mcp
+        run: pip install -r requirements.txt
+
+      - name: Install RAG dependencies
+        working-directory: rag
+        run: pip install -r requirements.txt
+
+      - name: Install backend dependencies (no pydantic-core issue on 3.11)
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run MCP tests
+        working-directory: mcp
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Run RAG tests
+        working-directory: rag
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Run backend tests (skip DB-dependent tests)
+        working-directory: backend
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Run root-level tests
+        run: python -m pytest tests/ -v --tb=short
+
+  # ── Extension tests ─────────────────────────────────────────────────────────
+  test-extension:
+    name: Extension Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run extension tests
+        run: node extension/tests/test_extension.mjs
+
+  # ── Trivy security scan ─────────────────────────────────────────────────────
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # required to upload SARIF to GitHub Security tab
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy — filesystem scan (secrets + vulnerabilities)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 0   # non-blocking: report but don't fail the build
+          trivyignores: .trivyignore
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Trivy — table output for PR comments
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0
+          trivyignores: .trivyignore
+
+  # ── Docker build verification ────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [ lint, test-python, test-extension ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: exam-guardian-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build MCP image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp
+          push: false
+          tags: exam-guardian-mcp:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build RAG image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./rag
+          push: false
+          tags: exam-guardian-rag:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: exam-guardian-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy — scan backend Docker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: exam-guardian-backend:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0
+
+  # ── ECR push (main branch only) ─────────────────────────────────────────────
+  ecr-push:
+    name: Push to ECR
+    runs-on: ubuntu-latest
+    needs: [ docker-build ]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    permissions:
+      id-token: write   # OIDC auth for AWS
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-backend:latest
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push MCP
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-mcp:latest
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-mcp:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push RAG
+        uses: docker/build-push-action@v5
+        with:
+          context: ./rag
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-rag:latest
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-rag:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-frontend:latest
+            ${{ steps.login-ecr.outputs.registry }}/exam-guardian-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,104 @@
+name: Deploy
+
+# Triggered automatically after CI passes on main,
+# OR manually with a specific image tag.
+
+on:
+  workflow_run:
+    workflows: [ "CI" ]
+    types: [ completed ]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (default: latest SHA from ECR)"
+        required: false
+        default: "latest"
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options: [ "production", "staging" ]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  # ── Gate: only deploy if CI passed ─────────────────────────────────────────
+  check-ci:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - id: check
+        run: echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+
+  # ── Deploy to EC2 ─────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: check-ci
+    if: needs.check-ci.outputs.should_deploy == 'true'
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            # Use the short SHA that was pushed by the CI workflow
+            echo "tag=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          timeout: 300s
+          script: |
+            set -euo pipefail
+            export IMAGE_TAG="${{ steps.tag.outputs.tag }}"
+            export AWS_REGION="${{ env.AWS_REGION }}"
+            cd /opt/exam-guardian
+            bash scripts/deploy.sh "$IMAGE_TAG"
+
+      - name: Verify health after deploy
+        run: |
+          echo "Waiting 30s for services to stabilise..."
+          sleep 30
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "http://${{ secrets.EC2_HOST }}/health" 2>/dev/null || echo "000")
+          echo "Health check HTTP status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::Health check failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✓ Deployment verified — HTTP $HTTP_STATUS"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deploy to ${{ github.event.inputs.environment || 'production' }} FAILED"
+          echo "  Image tag: ${{ steps.tag.outputs.tag }}"
+          echo "  SHA: ${{ github.sha }}"
+          echo "  Check EC2 logs: ssh ubuntu@${{ secrets.EC2_HOST }} docker compose -f /opt/exam-guardian/docker-compose.prod.yml logs --tail=50"
